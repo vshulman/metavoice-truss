@@ -103,14 +103,8 @@ class Model:
         GlobalState.enhancer = get_enhancer(GlobalState.config.enhancer)
 
 
-
-
-
-
     def predict(self, model_input: Any) -> Any:
-        audiodata = None # optionally, extract audio data from model_input
-        print(model_input)
-        # payload = json.loads(model_input)
+        audiodata = None # optionally, extract reference audio file from model_input
         wav_out_path = None
 
         tts_req = TTSRequest(**model_input)
@@ -138,15 +132,13 @@ class Model:
         b64 = wav_to_b64(wav_out_path)
         # Path(file).unlink(missing_ok=True)
         return b64
-        
-        
 
 def wav_to_b64(wav_in_path):
     SAMPLE_RATE, audio_array = wavfile.read(wav_in_path)  
 
-    with io.BytesIO() as byte_io:  # Using context manager for safe handling
+    with io.BytesIO() as byte_io:
         wavfile.write(byte_io, SAMPLE_RATE, audio_array)  
-        wav_bytes = byte_io.getvalue()  # Get the raw WAV bytes
+        wav_bytes = byte_io.getvalue()
 
     audio_data = base64.b64encode(wav_bytes).decode("UTF-8")
     return audio_data
