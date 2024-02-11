@@ -2,13 +2,15 @@ import json
 import subprocess
 import sys
 import tempfile
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from dataclasses import dataclass
 import torch
 from huggingface_hub import snapshot_download
 import io
 import base64
 from scipy.io import wavfile  # You might need to install this
+from fam.llm.enhancers import get_enhancer
+import os
 
 from fam.llm.sample import (
     InferenceConfig,
@@ -41,7 +43,7 @@ class ServingConfig:
     enhancer: Optional[Literal["df"]] = "df"
     """Enhancer to use for post-processing."""
 
-@dataclass(frozen=True)
+@dataclass
 class TTSRequest:
     text: str
     guidance: Optional[float] = 3.0
@@ -64,12 +66,11 @@ GlobalState.config = ServingConfig()
 
 
 class Model:
-    from fam.llm.enhancers import get_enhancer
-
     def __init__(self, **kwargs):
         self._secrets = kwargs["secrets"]
         self._model = None
         self._config = {}
+        self._data_dir = kwargs["data_dir"]
 
     def load(self):
         # kind of re-implement fam/llm/serving.py
@@ -109,32 +110,33 @@ class Model:
 
 
 
-    def predict(self, model_input):
+    def predict(self, model_input: Any) -> Any:
         audiodata = None # optionally, extract audio data from model_input
-        payload = json.loads(model_input)
+        print(model_input)
+        # payload = json.loads(model_input)
         wav_out_path = None
 
-        try:
-            tts_req = TTSRequest(**payload)
-            wav_path = tts_req.speaker_ref_path
-            wav_out_path = sample_utterance(
-                tts_req.text,
-                wav_path,
-                GlobalState.spkemb_model,
-                GlobalState.first_stage_model,
-                GlobalState.second_stage_model,
-                enhancer=GlobalState.enhancer,
-                first_stage_ckpt_path=None,
-                second_stage_ckpt_path=None,
-                guidance_scale=tts_req.guidance,
-                max_new_tokens=GlobalState.config.max_new_tokens,
-                temperature=GlobalState.config.temperature,
-                top_k=tts_req.top_k,
-                top_p=tts_req.top_p,
-            )
+        tts_req = TTSRequest(**model_input)
 
-        except Exception as e:
-            print(e)
+        print(self._data_dir)
+        tts_req.speaker_ref_path = os.path.join(self._data_dir, 'bria.mp3')
+
+        wav_path = tts_req.speaker_ref_path
+        wav_out_path = sample_utterance(
+            tts_req.text,
+            wav_path,
+            GlobalState.spkemb_model,
+            GlobalState.first_stage_model,
+            GlobalState.second_stage_model,
+            enhancer=GlobalState.enhancer,
+            first_stage_ckpt_path=None,
+            second_stage_ckpt_path=None,
+            guidance_scale=tts_req.guidance,
+            max_new_tokens=GlobalState.config.max_new_tokens,
+            temperature=GlobalState.config.temperature,
+            top_k=tts_req.top_k,
+            top_p=tts_req.top_p,
+        )
         
         b64 = wav_to_b64(wav_out_path)
         # Path(file).unlink(missing_ok=True)
@@ -142,13 +144,12 @@ class Model:
         
         
 
-def wav_to_b64(wav_out_path):
-    SAMPLE_RATE, audio_array = wavfile.read(wav_out_path)  # Load WAV file
+def wav_to_b64(wav_in_path):
+    SAMPLE_RATE, audio_array = wavfile.read(wav_in_path)  
 
-    bytes_wav = bytes()
-    byte_io = io.BytesIO(bytes_wav)
-    wavfile.write(byte_io, SAMPLE_RATE, audio_array)  # Write WAV in memory
+    with io.BytesIO() as byte_io:  # Using context manager for safe handling
+        wavfile.write(byte_io, SAMPLE_RATE, audio_array)  
+        wav_bytes = byte_io.getvalue()  # Get the raw WAV bytes
 
-    wav_bytes = byte_io.read()
     audio_data = base64.b64encode(wav_bytes).decode("UTF-8")
     return audio_data
