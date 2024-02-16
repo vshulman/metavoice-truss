@@ -22,9 +22,9 @@ requirements:
 - soundfile
 - huggingface_hub
 - scipy
-- git+https://github.com/vshulman/metavoice-src.git@27275b0bef3663c22f1bf02441702f03b9ba6773
+- git+https://github.com/metavoiceio/metavoice-src.git@11550bb4e8a1ad032cc1556cc924f7a4e767cbfa
 resources:
-  accelerator: "A10G:2"
+  accelerator: "A100"
   cpu: '2'
   memory: 16Gi
   use_gpu: true

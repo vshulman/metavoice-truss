@@ -1,5 +1,5 @@
 import tempfile
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Tuple
 from dataclasses import dataclass
 import torch
 from huggingface_hub import snapshot_download
@@ -43,7 +43,7 @@ class ServingConfig:
 @dataclass
 class TTSRequest:
     text: str
-    guidance: Optional[float] = 3.0
+    guidance: Optional[Tuple[float, float]] = (3.0, 1.0)
     top_p: Optional[float] = 0.95
     speaker_ref_path: Optional[str] = None
     top_k: Optional[int] = None
@@ -96,7 +96,9 @@ class Model:
             **common_config,
         )
 
-        spkemb, llm_stg1, llm_stg2 = build_models(config1, config2, device=device, use_kv_cache="flash_decoding")
+        spkemb, llm_stg1, llm_stg2 = build_models(
+            config1, config2, model_dir=model_dir, device=device, use_kv_cache="flash_decoding"
+        )
         GlobalState.spkemb_model = spkemb
         GlobalState.first_stage_model = llm_stg1
         GlobalState.second_stage_model = llm_stg2
