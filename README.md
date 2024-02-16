@@ -3,7 +3,6 @@ Truss for [Metavoice](https://github.com/metavoiceio/metavoice-src).
 
 ## Notes
 - Follows the server.py convention from the metavoice repo
-- Original metavoice repo is not fully configured as a library, so we use a fork that's been updated so that it can be included as a standard requirement in the `config.yaml` file
 - `flash_attn` requires installation with `--no-build-isolation`. As this isn't supported, installing the wheel directly seems to work.
 - Invoke with `truss predict -d '{"text": "This is a metavoice test"}' | python process.py` (similar to [Bark Truss example](https://github.com/basetenlabs/truss-examples/tree/main/bark)) – be aware of current 220 character limit on Metavoice
 
